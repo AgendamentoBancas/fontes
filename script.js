@@ -1,3 +1,25 @@
+// Função auxiliar para gerar um ID único e legível
+function gerarIdComposto(email, orientadorNome) {
+    // Caracteres inválidos em IDs do Firestore: / . # [ ] *
+    // Substitui ponto por '_dot_' e arroba por '_at_' no e-mail
+    // Certifica-se de que o e-mail não seja vazio antes de sanitizar
+    const emailSanitizado = email;
+    
+    // Substitui espaços e outros caracteres não alfanuméricos em nomes por '_'
+    // Certifica-se de que o nome do orientador não seja vazio antes de sanitizar
+    const orientadorSanitizado = orientadorNome ? orientadorNome.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() : 'sem_orientador';
+
+    // Gera uma pequena string aleatória para garantir a unicidade
+    const idAleatorio = Math.random().toString(36).substring(2, 8); // Ex: 'abc123'
+
+    // Concatena tudo para formar o ID do documento
+    // Adiciona um fallback caso as partes principais fiquem muito curtas
+    return `${emailSanitizado}_${orientadorSanitizado}_${idAleatorio}`;
+}
+
+
+
+
 // --- VARIÁVEL GLOBAL: agendamentosExistentes ---
 let agendamentosExistentes = []; // DECLARE AQUI, FORA DE QUALQUER FUNÇÃO OU LISTENER; Armazenará todos os agendamentos do banco
 
@@ -37,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let bancaSendoEditadaId = null; // Armazena o ID da banca que está sendo editada
 
     const HORARIOS_FIXOS_DISPONIVEIS = [
-        "07:30", "09:00", "10:30", "13:30", "15:00", "16:30"
+        "07:30", "09:00", "10:30", "13:00", "14:30", "16:00"
     ];
 
     // Adicione este listener:
@@ -300,7 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Lógica de SALVAR ou ATUALIZAR
         if (isUpdate) {
-            // Lógica de ATUALIZAÇÃO
+            // Lógica de ATUALIZAÇÃO (mantida como está, pois ela funciona para atualização)
             try {
                 const originalDocRef = db.collection('bancas').doc(bancaSendoEditadaId);
                 const originalDoc = await originalDocRef.get();
@@ -311,35 +333,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const originalData = originalDoc.data();
 
                 if (originalData.email === formData.email) {
-                    // E-mail NÃO mudou: Atualiza o documento existente
-                    await originalDocRef.update(formData); // Use update para atualizar apenas os campos fornecidos
+                    await originalDocRef.update(formData); 
                     alert('Banca atualizada com sucesso!');
+                    console.log('Banca atualizada:', bancaSendoEditadaId);
                 } else {
-                    // E-mail MUDOU: Deleta o antigo e cria um novo com o novo e-mail como ID
                     const confirmChange = confirm('O e-mail foi alterado. Isso irá criar uma nova banca com o novo e-mail como identificador e remover a banca antiga. Deseja continuar?');
-                    if (!confirmChange) {
-                        return;
-                    }
+                    if (!confirmChange) { return; }
                     await originalDocRef.delete();
-                    await db.collection('bancas').doc(formData.email).set(formData);
+                    await db.collection('bancas').doc(formData.email).set(formData); 
                     alert('Banca atualizada e migrada para o novo e-mail com sucesso!');
+                    console.log('Banca atualizada e ID de e-mail migrado para:', formData.email);
                 }
             } catch (error) {
                 console.error('ERRO AO ATUALIZAR A BANCA: ', error);
                 alert('Ocorreu um erro ao atualizar a banca. Verifique o console.');
             }
         } else {
-            // Lógica de CADASTRO
+            // --- INÍCIO DA LÓGICA DE CADASTRO CORRETA ---
             try {
-                // Usa o e-mail como o ID do documento
-                await db.collection('bancas').doc(formData.email).set(formData);
+                // Gerar o ID composto para a nova banca
+                const novoIdDaBanca = gerarIdComposto(formData.email, formData.orientador); 
+                
+                // Salvar o novo documento com o ID composto gerado
+                const docRef = await db.collection('bancas').doc(novoIdDaBanca).set(
+                    {...formData, timestamp: firebase.firestore.FieldValue.serverTimestamp()} // Adiciona timestamp aqui
+                ); 
+                
                 alert('Banca cadastrada com sucesso!');
-                console.log(`Banca cadastrada com ID: ${formData.email}`);
+                console.log('Dados salvos com sucesso! ID do documento:', novoIdDaBanca); // Loga o ID composto da nova banca
+
             } catch (error) {
                 console.error('ERRO AO CADASTRAR A BANCA: ', error);
                 alert('Ocorreu um erro inesperado ao tentar cadastrar a banca. Por favor, verifique o console do navegador e tente novamente.');
             }
+            // --- FIM DA LÓGICA DE CADASTRO CORRETA ---
         }
+
 
         // Ações pós-sucesso (Cadastro ou Atualização)
         bancaForm.reset();
