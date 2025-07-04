@@ -1,0 +1,264 @@
+/* style.css */
+
+:root {
+    --azul: #007BFF;
+    --azul-escuro: #0056b3;
+    --cinza-claro: #f4f6f8;
+    --borda: #ccc;
+    --form-bg: rgba(255, 255, 255, 0.95);
+    --form-padding: 30px; /* Variável para padding do container */
+    --gap-spacing: 30px; /* Variável para espaçamento entre colunas/linhas */
+}
+
+/* Reset básico */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #C8D0D8; /* Ou tente #D0D8E0, #C8D0D8 para um pouco mais escuro */
+    background-size: cover;
+    display: flex;
+    justify-content: center; /* Centraliza o wrapper principal horizontalmente */
+    align-items: flex-start; /* Alinha o wrapper ao topo da viewport */
+    min-height: 100vh; /* Garante que o body ocupe a altura total da tela */
+    padding: var(--gap-spacing); /* Padding geral para a página, evita colar nas bordas */
+}
+
+/* NOVO: Estilo para o wrapper principal */
+.main-content-wrapper {
+    display: grid; /* Usamos Grid para um layout de colunas mais controlado */
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Colunas flexíveis, mínimo 350px, crescem 1fr */
+    gap: var(--gap-spacing); /* Espaçamento entre as colunas/linhas do grid */
+    max-width: 1200px; /* Largura máxima para o layout */
+    width: 100%; /* Ocupa 100% da largura disponível até o max-width */
+    align-items: flex-start; /* Alinha os itens do grid pelo topo */
+}
+
+.container {
+    background-color: var(--form-bg);
+    padding: var(--form-padding);
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    /* flex: 1; min-width: 300px; - Removidos, pois o grid já cuida disso */
+}
+
+/* Ajustes específicos para o formulário e a listagem (opcional, se quiser larguras preferenciais) */
+.form-container {
+    /* grid-column: span 1; - Padrão */
+    /* max-width: 500px; - Removido se o grid for gerenciar larguras, ou ajustado */
+}
+
+.listagem-bancas-container {
+    /* grid-column: span 1; - Padrão */
+    /* max-width: 700px; - Removido se o grid for gerenciar larguras, ou ajustado */
+}
+
+h2 {
+    color: var(--azul);
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 2em;
+}
+
+label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+label.required::after {
+    content: " *";
+    color: red;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="tel"],
+select,
+textarea {
+    width: 100%;
+    padding: 10px;
+    margin-top: 0;
+    border: 1px solid var(--borda);
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    background-color: rgba(255, 255, 255, 0.8);
+    color: #333;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--azul);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+
+.radio-group, .local-group {
+    display: flex;
+    gap: 25px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.radio-group label,
+.local-group label {
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 0;
+}
+
+.radio-group input[type="radio"],
+.local-group input[type="radio"] {
+    width: auto;
+    margin-top: 0;
+}
+
+
+button {
+    margin-top: 30px;
+    padding: 12px;
+    background-color: var(--azul);
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    width: 100%; /* Botões do form */
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: var(--azul-escuro);
+    transform: translateY(-2px);
+}
+
+button:active {
+    background-color: #004085;
+    transform: translateY(0);
+}
+
+/* Botões de ação na tabela (Editar/Deletar) */
+.btn-acao {
+    width: auto;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin-top: 0;
+    display: inline-block;
+    margin-right: 5px; /* Espaço entre os botões de ação */
+}
+
+.acoes-selecao { /* Novo estilo para agrupar os botões de ação abaixo da tabela */
+    margin-top: 20px;
+    text-align: center; /* Centraliza os botões */
+}
+.acoes-selecao .btn-acao {
+    width: auto;
+    min-width: 150px; /* Garante que os botões tenham um tamanho mínimo */
+    margin: 0 10px; /* Margem entre eles */
+}
+
+
+#horarios {
+    margin-top: 10px;
+}
+
+
+/* Estilo da Tabela */
+#bancasTable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+#bancasTable thead th {
+    background-color: var(--azul);
+    color: white;
+    padding: 10px;
+    text-align: left;
+    font-size: 0.9em;
+    border: 1px solid var(--azul-escuro);
+}
+
+#bancasTable tbody td {
+    background-color: rgba(255, 255, 255, 0.7);
+    padding: 8px 10px;
+    border: 1px solid var(--borda);
+    color: #333;
+    font-size: 0.85em;
+    vertical-align: top;
+}
+
+#bancasTable tbody tr:nth-child(even) td {
+    background-color: rgba(240, 240, 240, 0.7);
+}
+
+/* Responsividade */
+@media (max-width: 1024px) { /* Para telas de tablets e menores, empilha os containers */
+    .main-content-wrapper {
+        grid-template-columns: 1fr; /* Força uma única coluna */
+        gap: var(--gap-spacing); /* Espaço entre os containers empilhados */
+        align-items: center; /* Centraliza os containers empilhados */
+    }
+
+    .form-container,
+    .listagem-bancas-container {
+        max-width: 600px; /* Largura máxima para os containers empilhados */
+        width: calc(100% - (2 * var(--form-padding))); /* Ajusta para preencher a tela com padding */
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 25px;
+    }
+    h2 {
+        font-size: 1.8em;
+    }
+    /* Estilos de tabela para telas menores, para que não quebrem o layout */
+    #bancasList {
+        overflow-x: scroll; /* Adiciona scroll horizontal à tabela se ela for muito larga */
+    }
+    #bancasTable {
+        min-width: 700px; /* Garante que a tabela tenha uma largura mínima para o scroll */
+    }
+}
+
+@media (max-width: 500px) {
+    body {
+        padding: 10px; /* Reduz padding geral em telas muito pequenas */
+    }
+    .container {
+        padding: 20px;
+    }
+    .radio-group, .local-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .radio-group label, .local-group label {
+        margin-top: 0;
+    }
+    button {
+        font-size: 1em;
+        padding: 10px;
+    }
+    .acoes-selecao .btn-acao {
+        min-width: unset; /* Remove min-width em telas muito pequenas para os botões de ação */
+        width: 100%; /* Botões de ação podem se esticar em telas muito pequenas */
+        margin: 5px 0;
+    }
+}

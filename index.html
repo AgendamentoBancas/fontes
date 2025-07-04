@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cadastro e Gerenciamento de Bancas</title>
+    <link rel="stylesheet" href="estilo.css" />
+
+    <!-- Firebase SDK (no head, para inicializar db cedo) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <!-- Opcional: Remova se não estiver usando Analytics -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script> -->
+    
+    <!-- EmailJS (se estiver usando) -->
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
+
+    <!-- Script de CONFIGURAÇÃO do Firebase -->
+    <script>
+        // Suas configurações do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBUSha3UWOG0k3XzFTnZPrrLDwnSyYPWE0",
+            authDomain: "agendamento-a1a47.firebaseapp.com",
+            databaseURL: "https://agendamento-a1a47-default-rtdb.firebaseio.com",
+            projectId: "agendamento-a1a47",
+            storageBucket: "agendamento-a1a47.firebasestorage.app",
+            messagingSenderId: "984329728983",
+            appId: "1:984329728983:web:feac77033b37b942909192",
+            measurementId: "G-EZVGKVV2PS"
+        };
+
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Obtém uma referência para o serviço Firestore (agora globalmente acessível)
+        var db = firebase.firestore(); 
+    </script>
+    
+</head>
+<body>
+
+    <div class="main-content-wrapper"> 
+        <div class="container form-container"> 
+            <h2>Cadastro de Banca de Defesa</h2>
+
+            <form id="bancaForm"> 
+                <label for="email" class="required">E-mail:</label>
+                <input type="email" id="email" required>
+
+                <label class="required">Tipo de Banca:</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="tipoBanca" value="TCC 1" required> TCC1</label>
+                    <label><input type="radio" name="tipoBanca" value="PFC-2" required> PFC2</label>
+                </div>
+
+                <label for="discente" class="required">Discente:</label>
+                <input type="text" id="discente" required>
+
+                <label for="orientador" class="required">Orientador:</label>
+                <input type="text" id="orientador" required>
+
+                <label for="coorientador">Coorientador:</label>
+                <input type="text" id="coorientador">
+
+                <label for="titulo" class="required">Título do Trabalho:</label>
+                <input type="text" id="titulo" required>
+
+                <label for="avaliador1" class="required">Avaliador 1:</label>
+                <input type="text" id="avaliador1" required>
+
+                <label for="avaliador2" class="required">Avaliador 2:</label>
+                <input type="text" id="avaliador2" required>
+
+                <!-- NOVO: Local antes da Data -->
+                <label class="required">Local:</label>
+                <div class="local-group">
+                    <label><input type="radio" name="local" value="LSD" required onchange="atualizarHorariosDisponiveis()"> LSD</label>
+                    <label><input type="radio" name="local" value="LEC1" required onchange="atualizarHorariosDisponiveis()"> LEC 1</label>
+                    <label><input type="radio" name="local" value="LEC2" required onchange="atualizarHorariosDisponiveis()"> LEC 2</label>
+                    <label><input type="radio" name="local" value="LEC3" required onchange="atualizarHorariosDisponiveis()"> LEC III</label>
+                </div>
+
+                <label for="data" class="required">Data da Defesa:</label>
+                <input type="date" id="data" required onchange="atualizarHorariosDisponiveis()"> 
+
+                <div id="horarios">
+                    <label for="hora" class="required">Horário Disponível:</label>
+                    <select id="hora" required>
+                        <option value="">Selecione um local e data primeiro</option> <!-- Texto inicial alterado -->
+                    </select>
+                </div>
+
+                <button type="button" id="cadastrarBtn">Cadastrar Banca</button>
+                <button type="button" id="atualizarBtn" style="background-color: #ff9800; display:none;">Atualizar Banca</button>
+                <button type="button" onclick="exportarBancasParaCSV()">Exportar para CSV</button>
+            </form>
+        </div>
+
+        <div class="container listagem-bancas-container" style="margin-top: 20px;">
+            <h2>Bancas Cadastradas</h2>
+            <button type="button" id="listarBancasBtn">Lista de Bancas</button> 
+            <p id="bancasInfo" style="font-size: 0.9em; color: #666; margin-top: 10px;">Clique em "Atualizar Lista de Bancas" para ver os agendamentos.</p>
+            <p id="bancasContagem" style="font-size: 0.9em; color: #666; margin-top: 5px;"></p> 
+            
+            <div id="bancasList" style="margin-top: 20px; overflow-x: auto;">
+                <table id="bancasTable">
+                    <thead>
+                        <tr>
+                            <th>Ação</th>
+                            <th>Data</th>
+                            <th>Horário</th>
+                            <th>Local</th>
+                            <th>Orientador</th>
+                            <th>Discente</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <div class="acoes-selecao">
+                <button type="button" id="editarSelecionadoBtn" class="btn-acao" style="background-color: #17a2b8;">Editar Selecionado</button>
+                <button type="button" id="deletarSelecionadoBtn" class="btn-acao" style="background-color: #dc3545;">Deletar Selecionado</button>
+            </div>
+        </div>
+    </div> 
+
+    <script src="script.js"></script>
+
+</body>
+</html>

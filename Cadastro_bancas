@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cadastro de Banca</title>
+  <link rel="stylesheet" href="estilo.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
+</head>
+<body>
+  <h2>Cadastro de Banca</h2>
+
+  <form id="bancaForm">
+    <label>Email:</label>
+    <input type="email" id="email" required>
+
+    <label>Tipo de Banca:</label>
+    <div class="radio-group">
+      <label><input type="radio" name="tipoBanca" value="PFC1" required> PFC1</label>
+      <label><input type="radio" name="tipoBanca" value="PFC2"> PFC2</label>
+    </div>
+
+    <label>Discente:</label>
+    <input type="text" id="discente" required>
+
+    <label>Orientador:</label>
+    <input type="text" id="orientador" required>
+
+    <label>Coorientador:</label>
+    <input type="text" id="coorientador">
+
+    <label>Título:</label>
+    <input type="text" id="titulo" required>
+
+    <label>Avaliador 1:</label>
+    <input type="text" id="avaliador1" required>
+
+    <label>Avaliador 2:</label>
+    <input type="text" id="avaliador2" required>
+
+    <label>Data:</label>
+    <input type="date" id="data" required onchange="verificarHorarios()">
+
+    <label>Horário:</label>
+    <select id="hora" required>
+      <option>Selecione uma data</option>
+    </select>
+
+    <label>Local:</label>
+    <div class="radio-group">
+      <label><input type="radio" name="local" value="LSD" required> LSD</label>
+      <label><input type="radio" name="local" value="LEC1"> LEC1</label>
+      <label><input type="radio" name="local" value="LEC2"> LEC2</label>
+      <label><input type="radio" name="local" value="LEC3"> LEC III</label>
+    </div>
+
+    <button type="submit">Cadastrar</button>
+  </form>
+
+  <script src="script.js"></script>
+</body>
+</html>
