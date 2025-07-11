@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             await auth.signOut();
             alert('Você foi desconectado.');
         } else {
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
     });
 
