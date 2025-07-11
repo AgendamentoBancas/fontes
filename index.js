@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (userDoc.exists) {
                 const userData = userDoc.data();
                 if (userData.role === 'admin') {
-                    window.location.href = 'index.html';
+                    window.location.href = 'cadastro_bancas.html';
                 } else {
                     errorMessage.textContent = 'Acesso negado: Somente administradores podem acessar esta área.';
                     await auth.signOut(); 
