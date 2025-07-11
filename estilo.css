@@ -1,4 +1,4 @@
-/* style.css */
+/* style.css - SOLUÇÃO FINAL para botões Editar/Deletar lado a lado e Exportar abaixo e CENTRALIZADOS */
 
 :root {
     --azul: #007BFF;
@@ -6,8 +6,8 @@
     --cinza-claro: #f4f6f8;
     --borda: #ccc;
     --form-bg: rgba(255, 255, 255, 0.95);
-    --form-padding: 30px; /* Variável para padding do container */
-    --gap-spacing: 30px; /* Variável para espaçamento entre colunas/linhas */
+    --form-padding: 30px;
+    --gap-spacing: 30px;
 }
 
 /* Reset básico */
@@ -19,25 +19,87 @@
 
 body {
     font-family: 'Segoe UI', sans-serif;
-    background-color: #C8D0D8; /* Ou tente #D0D8E0, #C8D0D8 para um pouco mais escuro */
+    background-color: #C8D0D8;
     background-size: cover;
     display: flex;
-    justify-content: center; /* Centraliza o wrapper principal horizontalmente */
-    align-items: flex-start; /* Alinha o wrapper ao topo da viewport */
-    min-height: 100vh; /* Garante que o body ocupe a altura total da tela */
-    padding: var(--gap-spacing); /* Padding geral para a página, evita colar nas bordas */
+    justify-content: center;
+    align-items: center; /* Centraliza verticalmente o conteúdo principal da página */
+    min-height: 100vh;
+    padding: var(--gap-spacing);
 }
 
-/* NOVO: Estilo para o wrapper principal */
 .main-content-wrapper {
-    display: grid; /* Usamos Grid para um layout de colunas mais controlado */
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); /* Colunas flexíveis, mínimo 350px, crescem 1fr */
-    gap: var(--gap-spacing); /* Espaçamento entre as colunas/linhas do grid */
-    max-width: 1200px; /* Largura máxima para o layout */
-    width: 100%; /* Ocupa 100% da largura disponível até o max-width */
-    align-items: flex-start; /* Alinha os itens do grid pelo topo */
+    display: grid; /* Mantém o Grid para o layout principal da index.html */
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: var(--gap-spacing);
+    max-width: 1200px;
+    width: 100%;
+    align-items: flex-start;
 }
 
+/* NOVO ESTILO: Container principal para a tela de login dividida */
+.login-screen-container {
+    background-color: white; /* Cor de fundo para o container de login */
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    display: flex; /* Habilita Flexbox para dividir a tela */
+    width: 90%; /* Largura total da div na tela */
+    max-width: 1000px; /* Largura máxima para a tela de login */
+    min-height: 500px; /* Altura mínima para a tela de login */
+    overflow: hidden; /* Garante que o conteúdo não vaze das bordas arredondadas */
+    margin: var(--gap-spacing) auto; /* Centraliza e adiciona margem superior/inferior */
+}
+
+/* Lado da logo (coluna esquerda) */
+.logo-side {
+    background-color: white; /* Alterado para branco */
+    display: flex;
+    justify-content: center; /* Centraliza o logo horizontalmente */
+    align-items: center; /* Centraliza o logo verticalmente */
+    flex: 1; /* Ocupa espaço igual (metade) */
+    padding: 40px;
+    box-sizing: border-box; /* Inclui padding na largura */
+}
+
+/* ESTILO AJUSTADO: Para o logo dentro da seção de logo */
+.login-logo {
+    max-width: 100%; /* Garante que o logo não ultrapasse a largura do seu container pai */
+    height: auto; /* Mantém a proporção da imagem */
+    display: block; /* Remove espaço extra abaixo da imagem */
+    object-fit: contain; /* Garante que a imagem se ajuste sem cortar */
+}
+
+/* Lado do login (formulário e opções - coluna direita) */
+.login-side {
+    display: flex;
+    flex-direction: column; /* Organiza formulário e opções verticalmente */
+    flex: 1; /* Ocupa espaço igual (metade) */
+    padding: var(--form-padding); /* Padding interno */
+    justify-content: center; /* Centraliza verticalmente o conteúdo */
+    align-items: stretch; /* Garante que os wrappers internos ocupem a largura total */
+    box-sizing: border-box; /* Inclui padding na largura */
+}
+
+/* Estilos para os wrappers de formulário e opções dentro do login-side */
+.login-form-wrapper {
+    background-color: var(--form-bg);
+    padding: var(--form-padding);
+    border-radius: 8px;
+    margin-bottom: var(--gap-spacing);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.login-options-wrapper {
+    background-color: var(--form-bg);
+    padding: var(--form-padding);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+
+/* Estilos gerais para containers (originalmente usados em index.html) */
 .container {
     background-color: var(--form-bg);
     padding: var(--form-padding);
@@ -45,19 +107,8 @@ body {
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    /* flex: 1; min-width: 300px; - Removidos, pois o grid já cuida disso */
 }
 
-/* Ajustes específicos para o formulário e a listagem (opcional, se quiser larguras preferenciais) */
-.form-container {
-    /* grid-column: span 1; - Padrão */
-    /* max-width: 500px; - Removido se o grid for gerenciar larguras, ou ajustado */
-}
-
-.listagem-bancas-container {
-    /* grid-column: span 1; - Padrão */
-    /* max-width: 700px; - Removido se o grid for gerenciar larguras, ou ajustado */
-}
 
 h2 {
     color: var(--azul);
@@ -81,9 +132,21 @@ label.required::after {
 
 input[type="text"],
 input[type="email"],
+input[type="password"],
 input[type="date"],
 input[type="tel"],
-select,
+select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 0;
+    border: 1px solid var(--borda);
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+    background-color: rgba(255, 255, 255, 0.8);
+    color: #333;
+}
+
 textarea {
     width: 100%;
     padding: 10px;
@@ -95,6 +158,7 @@ textarea {
     background-color: rgba(255, 255, 255, 0.8);
     color: #333;
 }
+
 
 input:focus,
 select:focus,
@@ -128,7 +192,8 @@ textarea:focus {
 }
 
 
-button {
+/* Estilo base para botões do FORMULÁRIO principal (Cadastrar, Atualizar) */
+button:not(.btn-login-logout):not(.btn-voltar) {
     margin-top: 30px;
     padding: 12px;
     background-color: var(--azul);
@@ -137,46 +202,126 @@ button {
     font-weight: bold;
     border: none;
     border-radius: 6px;
-    width: 100%; /* Botões do form */
+    width: 100%;
     cursor: pointer;
     transition: background-color 0.3s ease, transform 0.2s ease;
 }
 
-button:hover {
+button:not(.btn-login-logout):not(.btn-voltar):hover {
     background-color: var(--azul-escuro);
     transform: translateY(-2px);
 }
 
-button:active {
+button:not(.btn-login-logout):not(.btn-voltar):active {
     background-color: #004085;
     transform: translateY(0);
 }
 
-/* Botões de ação na tabela (Editar/Deletar) */
-.btn-acao {
+/* Estilo para o botão de login/logout (no canto superior direito da index.html) */
+.btn-login-logout {
     width: auto;
     padding: 8px 12px;
     font-size: 0.9em;
     margin-top: 0;
-    display: inline-block;
-    margin-right: 5px; /* Espaço entre os botões de ação */
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    color: white;
+    background-color: var(--azul);
 }
 
-.acoes-selecao { /* Novo estilo para agrupar os botões de ação abaixo da tabela */
+/* Estilos para a div que agrupa os botões de ação do admin na index.html */
+/* Estilos para a div que agrupa os botões de ação do admin na index.html */
+.acoes-selecao {
     margin-top: 20px;
-    text-align: center; /* Centraliza os botões */
+    text-align: center; /* Mantenha o text-align para centralizar inline-block filhos */
+    /* Remova display: flex, justify-content, align-items, flex-wrap, gap para esta tentativa */
+    /* Vamos gerenciar o layout de forma mais tradicional para esses botões */
 }
-.acoes-selecao .btn-acao {
+
+/* Estilos para os botões de ação individuais (Editar, Deletar) na index.html */
+/* Eles estarão na mesma linha */
+#editarSelecionadoBtn {
     width: auto;
-    min-width: 150px; /* Garante que os botões tenham um tamanho mínimo */
-    margin: 0 10px; /* Margem entre eles */
+    min-width: 150px;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin-right: 10px; /* Espaço entre Editar e Deletar */
+    margin-bottom: 10px; /* Espaço para o botão Exportar abaixo */
+    display: inline-block; /* Ficam lado a lado */
+    text-align: center;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+#deletarSelecionadoBtn {
+    width: auto;
+    min-width: 150px;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    margin-right: 0; /* Não precisa de margem à direita */
+    margin-bottom: 10px; /* Espaço para o botão Exportar abaixo */
+    display: inline-block; /* Ficam lado a lado */
+    text-align: center;
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+/* Estilo ESPECÍFICO para o botão de Exportar CSV na index.html */
+/* Este estilo o força para uma nova linha e o centraliza */
+#exportarCsvBtn { 
+    display: block; /* FORÇA este botão a ir para uma nova linha */
+    width: fit-content; /* Largura se ajusta ao conteúdo */
+    min-width: 180px; /* Largura mínima para o botão de exportar */
+    
+    /* Centraliza e adiciona margem superior, removendo margens laterais */
+    margin: 20px auto 0 auto; /* 20px de margem superior, centralizado */
+    
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-sizing: border-box;
+    color: white;
+}
+
+
+/* Estilo para o botão "Voltar para Cadastro" na tela de login */
+.btn-voltar {
+    background-color: transparent;
+    color: var(--azul);
+    border: 1px solid var(--azul);
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 1em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    margin-top: 15px;
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    text-decoration: none;
+}
+
+.btn-voltar:hover {
+    background-color: var(--azul);
+    color: white;
+}
+
+.btn-voltar:active {
+    background-color: var(--azul-escuro);
+    border-color: var(--azul-escuro);
 }
 
 
 #horarios {
     margin-top: 10px;
 }
-
 
 /* Estilo da Tabela */
 #bancasTable {
@@ -208,17 +353,48 @@ button:active {
 }
 
 /* Responsividade */
-@media (max-width: 1024px) { /* Para telas de tablets e menores, empilha os containers */
+@media (max-width: 1024px) {
+    /* Ajustes para o layout principal da index.html */
     .main-content-wrapper {
-        grid-template-columns: 1fr; /* Força uma única coluna */
-        gap: var(--gap-spacing); /* Espaço entre os containers empilhados */
-        align-items: center; /* Centraliza os containers empilhados */
+        grid-template-columns: 1fr;
+        gap: var(--gap-spacing);
+        align-items: center;
     }
 
     .form-container,
     .listagem-bancas-container {
-        max-width: 600px; /* Largura máxima para os containers empilhados */
-        width: calc(100% - (2 * var(--form-padding))); /* Ajusta para preencher a tela com padding */
+        max-width: 600px;
+        width: calc(100% - (2 * var(--form-padding)));
+    }
+
+    /* Regras de responsividade para a tela de login dividida */
+    .login-screen-container {
+        flex-direction: column; /* Empilha as colunas (logo e login) em telas menores */
+        max-width: 500px; /* Largura máxima para o container de login empilhado */
+        min-height: auto; /* Altura automática quando empilhado */
+    }
+    .logo-side {
+        padding: 20px; /* Reduz padding da logo em telas menores */
+        min-height: 200px; /* Altura mínima para a logo quando empilhada */
+    }
+    .login-side {
+        padding: var(--form-padding); /* Mantém padding do lado do login */
+    }
+    .login-form-wrapper,
+    .login-options-wrapper {
+        padding: 20px; /* Reduz padding interno dos wrappers */
+        margin-bottom: 20px; /* Reduz espaçamento entre eles */
+    }
+    /* Em telas menores, os botões de ação também se empilham */
+    .acoes-selecao {
+        flex-direction: column;
+        align-items: center;
+    }
+    /* Regras específicas para botões de ação em telas pequenas */
+    .acoes-selecao button { /* Seleciona todos os botões dentro de acoes-selecao */
+        width: 100%; /* Ocupa a largura total */
+        margin: 5px 0 !important; /* Adiciona margem vertical entre eles */
+        min-width: unset; /* Remove largura mínima */
     }
 }
 
@@ -229,18 +405,17 @@ button:active {
     h2 {
         font-size: 1.8em;
     }
-    /* Estilos de tabela para telas menores, para que não quebrem o layout */
     #bancasList {
-        overflow-x: scroll; /* Adiciona scroll horizontal à tabela se ela for muito larga */
+        overflow-x: scroll;
     }
     #bancasTable {
-        min-width: 700px; /* Garante que a tabela tenha uma largura mínima para o scroll */
+        min-width: 700px;
     }
 }
 
 @media (max-width: 500px) {
     body {
-        padding: 10px; /* Reduz padding geral em telas muito pequenas */
+        padding: 10px;
     }
     .container {
         padding: 20px;
@@ -252,13 +427,18 @@ button:active {
     .radio-group label, .local-group label {
         margin-top: 0;
     }
-    button {
+    /* Botões gerais do formulário */
+    button:not(.btn-login-logout):not(.btn-voltar) {
         font-size: 1em;
         padding: 10px;
     }
-    .acoes-selecao .btn-acao {
-        min-width: unset; /* Remove min-width em telas muito pequenas para os botões de ação */
-        width: 100%; /* Botões de ação podem se esticar em telas muito pequenas */
-        margin: 5px 0;
+    /* Botão de login/logout no canto superior da index.html */
+    .btn-login-logout {
+        width: 100%;
+        margin-top: 10px;
+    }
+    /* Botão "Voltar" na tela de login */
+    .btn-voltar {
+        width: 100%;
     }
 }

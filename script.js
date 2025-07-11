@@ -1,31 +1,16 @@
 // Função auxiliar para gerar um ID único e legível
 function gerarIdComposto(email, orientadorNome) {
-    // Caracteres inválidos em IDs do Firestore: / . # [ ] *
-    // Substitui ponto por '_dot_' e arroba por '_at_' no e-mail
-    // Certifica-se de que o e-mail não seja vazio antes de sanitizar
-    const emailSanitizado = email;
-    
-    // Substitui espaços e outros caracteres não alfanuméricos em nomes por '_'
-    // Certifica-se de que o nome do orientador não seja vazio antes de sanitizar
+    const emailSanitizado = email.replace(/[.#$[\]]/g, '_');
     const orientadorSanitizado = orientadorNome ? orientadorNome.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() : 'sem_orientador';
-
-    // Gera uma pequena string aleatória para garantir a unicidade
-    const idAleatorio = Math.random().toString(36).substring(2, 8); // Ex: 'abc123'
-
-    // Concatena tudo para formar o ID do documento
-    // Adiciona um fallback caso as partes principais fiquem muito curtas
+    const idAleatorio = Math.random().toString(36).substring(2, 8);
     return `${emailSanitizado}_${orientadorSanitizado}_${idAleatorio}`;
 }
 
-
-
-
-// --- VARIÁVEL GLOBAL: agendamentosExistentes ---
-let agendamentosExistentes = []; // DECLARE AQUI, FORA DE QUALQUER FUNÇÃO OU LISTENER; Armazenará todos os agendamentos do banco
+let agendamentosExistentes = [];
+let currentUserRole = null;
+let currentUserName = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
-
-
     // --- VERIFICAÇÃO DE CONEXÃO COM FIREBASE ---
     if (typeof firebase === 'undefined') {
         console.error('ERRO FATAL: Biblioteca Firebase não carregada. Verifique o <script src="..."> no seu HTML.');
@@ -33,68 +18,133 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelector('form').addEventListener('submit', (e) => e.preventDefault());
         return;
     }
-
     if (typeof db === 'undefined' || db === null) {
         console.error('ERRO FATAL: Objeto Firestore (db) não inicializado. Verifique firebase.initializeApp() e firebase.firestore() no seu HTML.');
         alert('Erro: Conexão com o Firestore não estabelecida! Verifique a configuração do Firebase no HTML.');
         document.querySelector('form').addEventListener('submit', (e) => e.preventDefault());
         return;
     }
+    if (typeof auth === 'undefined' || auth === null) {
+        console.error('ERRO FATAL: Objeto Firebase Auth (auth) não inicializado. Verifique firebase.auth() no seu HTML.');
+        alert('Erro: Conexão com o Firebase Auth não estabelecida! Verifique a configuração do Firebase no HTML.');
+        document.querySelector('form').addEventListener('submit', (e) => e.preventDefault());
+        return;
+    }
     // --- FIM DA VERIFICAÇÃO DE CONEXÃO ---
 
-    // Elementos do DOM
-    const dataInput = document.getElementById('data'); // O input type="date"
+    const dataInput = document.getElementById('data');
     const horaSelect = document.getElementById('hora');
     const bancasTableBody = document.querySelector('#bancasTable tbody');
+    const bancasTableHead = document.querySelector('#bancasTable thead tr');
     const listarBancasBtn = document.getElementById('listarBancasBtn');
-    const cadastrarBtn = document.getElementById('cadastrarBtn'); // Agora type="button"
+    const cadastrarBtn = document.getElementById('cadastrarBtn');
     const atualizarBtn = document.getElementById('atualizarBtn');
     const bancaForm = document.getElementById('bancaForm');
     const bancasContagemParagrafo = document.getElementById('bancasContagem');
     const editarSelecionadoBtn = document.getElementById('editarSelecionadoBtn');
     const deletarSelecionadoBtn = document.getElementById('deletarSelecionadoBtn');
-    const localRadioButtons = document.querySelectorAll('input[name="local"]'); // Captura todos os radios de local
-    const exportarCsvBtn = document.getElementById('exportarCsvBtn'); // Pega o botão de exportar
+    const localRadioButtons = document.querySelectorAll('input[name="local"]');
+    const exportarCsvBtn = document.getElementById('exportarCsvBtn');
+    const loginLogoutBtn = document.getElementById('loginLogoutBtn');
+    const userInfoSpan = document.getElementById('userInfo');
+    const adminAcoesDiv = document.getElementById('adminAcoes');
 
-    let bancaSendoEditadaId = null; // Armazena o ID da banca que está sendo editada
+    // NOVOS ELEMENTOS DOM para a opção "Outro"
+    const localOutroRadio = document.getElementById('localOutroRadio');
+    const outroLocalDiv = document.getElementById('outroLocalDiv');
+    const outroLocalInput = document.getElementById('outroLocalInput');
 
+    let bancaSendoEditadaId = null;
     const HORARIOS_FIXOS_DISPONIVEIS = [
-        "07:30", "09:00", "10:30", "13:00", "14:30", "16:00"
+        "07:30", "09:00", "10:30", "13:30", "15:00", "16:30"
     ];
 
-    // Adicione este listener:
-    if (exportarCsvBtn) {
-        exportarCsvBtn.addEventListener('click', exportarBancasParaCSV);
-    }
+    // --- Listener para o estado de autenticação do Firebase ---
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            try {
+                const userDoc = await db.collection('usuarios').doc(user.uid).get();
+                if (userDoc.exists) {
+                    currentUserRole = userDoc.data().role;
+                    currentUserName = user.email;
+                } else {
+                    currentUserRole = 'user';
+                    currentUserName = user.email;
+                    await db.collection('usuarios').doc(user.uid).set({ email: user.email, role: 'user' }, { merge: true });
+                }
+            } catch (error) {
+                console.error("Erro ao buscar a role do usuário:", error);
+                currentUserRole = 'user';
+                currentUserName = user.email;
+            }
+            loginLogoutBtn.textContent = 'Sair (Admin)';
+            loginLogoutBtn.style.backgroundColor = '#dc3545';
+            userInfoSpan.textContent = `Logado como: ${currentUserName} (${currentUserRole === 'admin' ? 'Administrador' : 'Usuário Comum'})`;
+        } else {
+            currentUserRole = null;
+            currentUserName = null;
+            loginLogoutBtn.textContent = 'Logar como Administrador';
+            loginLogoutBtn.style.backgroundColor = '#007bff';
+            userInfoSpan.textContent = '';
+        }
+        updateUIVisibility();
+    });
 
-    atualizarBtn.style.display = 'none'; // Esconde o botão atualizar inicialmente
+    // --- Lógica do botão Login/Logout ---
+    loginLogoutBtn.addEventListener('click', async () => {
+        if (auth.currentUser) {
+            await auth.signOut();
+            alert('Você foi desconectado.');
+        } else {
+            window.location.href = 'login.html';
+        }
+    });
+
+    // --- Função para atualizar a visibilidade da UI ---
+    function updateUIVisibility() {
+        if (currentUserRole === 'admin') {
+            atualizarBtn.style.display = 'block';
+            adminAcoesDiv.style.display = 'block';
+            if (!document.getElementById('thAcao')) {
+                const th = document.createElement('th');
+                th.id = 'thAcao';
+                th.textContent = 'Ação';
+                bancasTableHead.prepend(th);
+            }
+        } else {
+            atualizarBtn.style.display = 'none';
+            adminAcoesDiv.style.display = 'none';
+            const th = document.getElementById('thAcao');
+            if (th) {
+                th.remove();
+            }
+            bancaSendoEditadaId = null;
+            bancaForm.reset();
+        }
+        carregarBancasDoFirestore();
+    }
 
     // --- FUNÇÕES DE CARREGAMENTO E EXIBIÇÃO DE BANCAS ---
     async function carregarBancasDoFirestore() {
         try {
-            const snapshot = await db.collection('bancas').orderBy('data', 'asc').orderBy('horario', 'asc').get(); 
-            agendamentosExistentes = []; 
-
-            let contagemTCC1 = 0; 
-            let contagemPFC2 = 0; 
+            const snapshot = await db.collection('bancas').orderBy('data', 'asc').orderBy('horario', 'asc').get();
+            agendamentosExistentes = [];
+            let contagemTCC1 = 0;
+            let contagemPFC2 = 0;
 
             snapshot.forEach(doc => {
                 const dataBanca = doc.data();
-                dataBanca.id = doc.id; 
+                dataBanca.id = doc.id;
                 agendamentosExistentes.push(dataBanca);
-
                 if (dataBanca.tipoBanca === 'TCC 1') {
                     contagemTCC1++;
                 } else if (dataBanca.tipoBanca === 'PFC-2') {
                     contagemPFC2++;
                 }
             });
-            
             exibirBancasNaTabela();
-
             document.getElementById('bancasInfo').textContent = `Total de bancas cadastradas: ${agendamentosExistentes.length}`;
             bancasContagemParagrafo.textContent = `TCC1: ${contagemTCC1} | PFC2: ${contagemPFC2}`;
-
         } catch (error) {
             console.error('Erro ao carregar bancas do Firestore: ', error);
             document.getElementById('bancasInfo').textContent = 'Erro ao carregar bancas. Verifique o console.';
@@ -103,34 +153,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function exibirBancasNaTabela() {
-        bancasTableBody.innerHTML = ''; 
-
+        bancasTableBody.innerHTML = '';
         if (agendamentosExistentes.length === 0) {
-            bancasTableBody.innerHTML = '<tr><td colspan="6">Nenhuma banca cadastrada.</td></tr>'; 
+            const colspan = currentUserRole === 'admin' ? 6 : 5;
+            bancasTableBody.innerHTML = `<tr><td colspan="${colspan}">Nenhuma banca cadastrada.</td></tr>`;
             return;
         }
 
         agendamentosExistentes.forEach(banca => {
             const row = bancasTableBody.insertRow();
-            row.id = `banca-${banca.id}`; 
-            row.innerHTML = `
-                <td>
-                    <input type="radio" name="bancaSelecionada" value="${banca.id}">
-                </td>
-                <td>${banca.data || ''}</td>
-                <td>${banca.horario || ''}</td>
-                <td>${banca.local || ''}</td>
-                <td>${banca.orientador || ''}</td>
-                <td>${banca.discente || ''}</td>
-            `;
-        });
+            row.id = `banca-${banca.id}`;
+            
+            if (currentUserRole === 'admin') {
+                const actionCell = row.insertCell();
+                const radioInput = document.createElement('input');
+                radioInput.type = 'radio';
+                radioInput.name = 'bancaSelecionada';
+                radioInput.value = banca.id;
+                actionCell.appendChild(radioInput);
+            }
 
-        // Os event listeners para rádio já serão tratados pelos botões 'Selecionado'
+            const dataCell = row.insertCell();
+            dataCell.textContent = banca.data || '';
+
+            const horarioCell = row.insertCell();
+            horarioCell.textContent = banca.horario || '';
+
+            const localCell = row.insertCell();
+            localCell.textContent = banca.local || '';
+
+            const orientadorCell = row.insertCell();
+            orientadorCell.textContent = banca.orientador || '';
+
+            const discenteCell = row.insertCell();
+            discenteCell.textContent = banca.discente || '';
+        });
     }
 
     // --- FUNÇÕES DE AÇÃO (EDITAR E DELETAR) ---
 
     async function preencherFormularioParaEdicao(id) {
+        if (currentUserRole !== 'admin') {
+            alert('Você não tem permissão para editar bancas.');
+            return;
+        }
         try {
             const banca = agendamentosExistentes.find(b => b.id === id);
             if (!banca) {
@@ -149,14 +215,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('avaliador1').value = banca.avaliador1 || '';
             document.getElementById('avaliador2').value = banca.avaliador2 || '';
             
-            // Preenche a data e o local
             dataInput.value = banca.data || ''; 
+            
+            // LÓGICA PARA PREENCHER O LOCAL (FIXO OU "OUTRO")
             const localRadio = document.querySelector(`input[name="local"][value="${banca.local}"]`);
-            if (localRadio) localRadio.checked = true; // Seleciona o rádio do local
+            if (localRadio) {
+                localRadio.checked = true;
+                // A caixa de texto é escondida aqui apenas se o local for um dos fixos
+                if (banca.local !== 'Outro') { // Se o local salvo NÃO é "Outro", esconde a caixa.
+                   outroLocalDiv.style.display = 'none';
+                   outroLocalInput.value = '';
+                } else { // Se o local salvo É "Outro", mostra a caixa e preenche
+                   outroLocalDiv.style.display = 'block';
+                   outroLocalInput.value = banca.local || '';
+                }
+            } else {
+                // Se o local da banca NÃO está entre os rádios fixos, é um "Outro" local
+                localOutroRadio.checked = true;
+                outroLocalDiv.style.display = 'block'; // Mostra a caixa de texto
+                outroLocalInput.value = banca.local || ''; // Preenche com o local salvo
+            }
 
-            // Chama atualizarHorariosDisponiveis com a data E o local da banca original
-            await atualizarHorariosDisponiveis(); // Agora a função pega data e local dos inputs
-            document.getElementById('hora').value = banca.horario || ''; // Seleciona o horário
+            await atualizarHorariosDisponiveis(); // Atualiza horários com base na data e local (incluindo "Outro")
+            document.getElementById('hora').value = banca.horario || '';
 
             cadastrarBtn.style.display = 'none';
             atualizarBtn.style.display = 'block';
@@ -171,6 +252,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deletarBanca(id) {
+        if (currentUserRole !== 'admin') {
+            alert('Você não tem permissão para deletar bancas.');
+            return;
+        }
         if (!confirm('Tem certeza que deseja deletar esta banca?')) {
             return;
         }
@@ -187,7 +272,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 bancaSendoEditadaId = null;
                 cadastrarBtn.style.display = 'block';
                 atualizarBtn.style.display = 'none';
-                atualizarHorariosDisponiveis(); 
+                atualizarHorariosDisponiveis();
             }
 
         } catch (error) {
@@ -196,34 +281,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-
     // --- LÓGICA DE ENVIO/ATUALIZAÇÃO DO FORMULÁRIO (Função principal) ---
-
-    // Listener para o botão CADASTRAR (agora type="button")
     cadastrarBtn.addEventListener('click', async (e) => {
         handleFormSubmission();
     });
 
-    // Listener para o botão ATUALIZAR (type="button")
     atualizarBtn.addEventListener('click', async (e) => {
-        e.preventDefault(); 
-
+        e.preventDefault();
+        if (currentUserRole !== 'admin') {
+            alert('Você não tem permissão para atualizar bancas.');
+            return;
+        }
         if (!bancaSendoEditadaId) {
             alert('Nenhuma banca selecionada para atualização.');
             return;
         }
-
         await handleFormSubmission(true);
     });
 
-
-       // --- LÓGICA DE ENVIO/ATUALIZAÇÃO DO FORMULÁRIO (Função principal) ---
     async function handleFormSubmission(isUpdate = false) {
-        // --- VALIDAÇÃO E CAPTURA DE DADOS DO FORMULÁRIO (Unificado aqui) ---
-        // Garante que campos obrigatórios estejam preenchidos
         const camposObrigatorios = document.querySelectorAll('input[required], select[required], textarea[required]');
         let formularioValido = true;
-
         camposObrigatorios.forEach(campo => {
             if (campo.value.trim() === '') {
                 campo.style.borderColor = 'red';
@@ -254,29 +332,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (localGroupDiv) localGroupDiv.style.border = 'none';
         }
 
+        // --- VALIDAÇÃO ESPECÍFICA PARA "OUTRO" LOCAL ---
+        let localFinal = '';
+        if (localChecked && localChecked.value === 'Outro') {
+            localFinal = outroLocalInput.value.trim();
+            if (localFinal === '') {
+                outroLocalInput.style.borderColor = 'red';
+                alert('Por favor, digite o local da banca.');
+                formularioValido = false;
+            } else {
+                outroLocalInput.style.borderColor = '#ccc';
+            }
+        } else if (localChecked) {
+            localFinal = localChecked.value;
+        }
+        // --- FIM DA VALIDAÇÃO ESPECÍFICA ---
+
         if (!formularioValido) {
             alert('Por favor, preencha todos os campos obrigatórios.');
             console.error('ERRO: Formulário não preenchido completamente ou com erros.');
             return;
         }
-        // --- FIM DA VALIDAÇÃO INICIAL ---
 
-        // CAPTURA DOS DADOS (AGORA DENTRO DO ESCOPO DA FUNÇÃO)
         const formData = {
             email: document.getElementById('email').value.trim(),
             tipoBanca: tipoBancaChecked.value,
             discente: document.getElementById('discente').value.trim(),
             orientador: document.getElementById('orientador').value.trim(),
-            coorientador: document.getElementById('coorientador').value.trim() || null, // Garante que seja null se vazio
+            coorientador: document.getElementById('coorientador').value.trim() || null,
             titulo: document.getElementById('titulo').value.trim(),
             avaliador1: document.getElementById('avaliador1').value.trim(),
             avaliador2: document.getElementById('avaliador2').value.trim(),
             data: document.getElementById('data').value,
             horario: document.getElementById('hora').value,
-            local: localChecked.value
+            local: localFinal // USA O VALOR FINAL DO LOCAL AQUI
         };
 
-        // Validação extra para data/horario/local (agora usando formData)
         if (!formData.data) {
             alert('Por favor, selecione uma data.');
             return;
@@ -290,7 +381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // INÍCIO DA VERIFICAÇÃO DE DUPLICIDADE (Reutiliza a lógica)
+        // INÍCIO DA VERIFICAÇÃO DE DUPLICIDADE
         try {
             let idParaIgnorarNaDuplicidade = isUpdate ? bancaSendoEditadaId : null; 
 
@@ -320,9 +411,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         // --- FIM DA VERIFICAÇÃO DE DUPLICIDADE ---
 
-        // Lógica de SALVAR ou ATUALIZAR
         if (isUpdate) {
-            // Lógica de ATUALIZAÇÃO (mantida como está, pois ela funciona para atualização)
+            if (currentUserRole !== 'admin') {
+                alert('Você não tem permissão para atualizar bancas.');
+                return;
+            }
             try {
                 const originalDocRef = db.collection('bancas').doc(bancaSendoEditadaId);
                 const originalDoc = await originalDocRef.get();
@@ -332,78 +425,90 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 const originalData = originalDoc.data();
 
-                if (originalData.email === formData.email) {
+                if (originalData.email === formData.email && originalData.orientador === formData.orientador) {
                     await originalDocRef.update(formData); 
                     alert('Banca atualizada com sucesso!');
                     console.log('Banca atualizada:', bancaSendoEditadaId);
                 } else {
-                    const confirmChange = confirm('O e-mail foi alterado. Isso irá criar uma nova banca com o novo e-mail como identificador e remover a banca antiga. Deseja continuar?');
+                    const confirmChange = confirm('O e-mail ou orientador foi alterado. Isso irá criar uma nova banca com o novo identificador e remover a banca antiga. Deseja continuar?');
                     if (!confirmChange) { return; }
                     await originalDocRef.delete();
-                    await db.collection('bancas').doc(formData.email).set(formData); 
-                    alert('Banca atualizada e migrada para o novo e-mail com sucesso!');
-                    console.log('Banca atualizada e ID de e-mail migrado para:', formData.email);
+                    const novoIdDaBanca = gerarIdComposto(formData.email, formData.orientador);
+                    await db.collection('bancas').doc(novoIdDaBanca).set(
+                        {...formData, timestamp: firebase.firestore.FieldValue.serverTimestamp()}
+                    );
+                    alert('Banca atualizada e migrada para o novo identificador com sucesso!');
+                    console.log('Banca atualizada e ID migrado para:', novoIdDaBanca);
                 }
             } catch (error) {
                 console.error('ERRO AO ATUALIZAR A BANCA: ', error);
                 alert('Ocorreu um erro ao atualizar a banca. Verifique o console.');
             }
         } else {
-            // --- INÍCIO DA LÓGICA DE CADASTRO CORRETA ---
             try {
-                // Gerar o ID composto para a nova banca
                 const novoIdDaBanca = gerarIdComposto(formData.email, formData.orientador); 
-                
-                // Salvar o novo documento com o ID composto gerado
-                const docRef = await db.collection('bancas').doc(novoIdDaBanca).set(
-                    {...formData, timestamp: firebase.firestore.FieldValue.serverTimestamp()} // Adiciona timestamp aqui
+                const existingDoc = await db.collection('bancas').doc(novoIdDaBanca).get();
+                if (existingDoc.exists) {
+                    alert('Erro: Uma banca com um identificador similar (e-mail e orientador) já foi cadastrada. Se você deseja atualizar uma banca existente, peça para um administrador usar a função de edição.');
+                    return;
+                }
+                await db.collection('bancas').doc(novoIdDaBanca).set(
+                    {...formData, timestamp: firebase.firestore.FieldValue.serverTimestamp()}
                 ); 
-                
                 alert('Banca cadastrada com sucesso!');
-                console.log('Dados salvos com sucesso! ID do documento:', novoIdDaBanca); // Loga o ID composto da nova banca
-
+                console.log('Dados salvos com sucesso! ID do documento:', novoIdDaBanca);
             } catch (error) {
                 console.error('ERRO AO CADASTRAR A BANCA: ', error);
                 alert('Ocorreu um erro inesperado ao tentar cadastrar a banca. Por favor, verifique o console do navegador e tente novamente.');
             }
-            // --- FIM DA LÓGICA DE CADASTRO CORRETA ---
         }
 
-
-        // Ações pós-sucesso (Cadastro ou Atualização)
         bancaForm.reset();
         bancaSendoEditadaId = null;
         cadastrarBtn.style.display = 'block';
         atualizarBtn.style.display = 'none';
-        await window.atualizarHorariosDisponiveis(); // Limpa dropdown e atualiza conforme a nova seleção (data e local)
-        await carregarBancasDoFirestore(); // Recarrega a tabela e contadores
+        
+        // Esconde e limpa o campo "Outro" após o envio do formulário
+        outroLocalInput.value = '';
+        outroLocalDiv.style.display = 'none';
+        
+        await window.atualizarHorariosDisponiveis();
+        await carregarBancasDoFirestore();
     }
 
-
     // --- FUNÇÃO DE ATUALIZAÇÃO DO DROPDOWN DE HORÁRIOS ---
-    // Esta função agora é chamada quando a data OU o local são alterados
-    window.atualizarHorariosDisponiveis = async function() { 
+    window.atualizarHorariosDisponiveis = async function() {
         const dataParaVerificar = dataInput.value;
-        const localRadioSelecionado = document.querySelector('input[name="local"]:checked'); // Pega o local selecionado
-        const localParaVerificar = localRadioSelecionado ? localRadioSelecionado.value : '';
+        const localRadioSelecionado = document.querySelector('input[name="local"]:checked');
+        
+        let localParaVerificar = '';
 
-        horaSelect.innerHTML = ''; // Limpa opções existentes
+        if (localRadioSelecionado) {
+            // AQUI ESTÁ A CHAVE: Visibilidade do campo "Outro" controlada SOMENTE PELO CLIQUE NO RÁDIO
+            // Essa função atualizarHorariosDisponiveis não mais define a visibilidade da div.
+            // Ela apenas pega o valor correto para a verificação de horários.
 
-        // Condição para exibir a mensagem inicial no dropdown
+            if (localRadioSelecionado.value === 'Outro') {
+                localParaVerificar = outroLocalInput.value.trim(); // Pega o valor digitado
+            } else {
+                localParaVerificar = localRadioSelecionado.value; // Pega o valor do rádio fixo
+            }
+        }
+
+        horaSelect.innerHTML = '';
+
         if (!dataParaVerificar || !localParaVerificar) {
             const option = document.createElement('option');
             option.value = "";
-            option.textContent = 'Selecione um local e data primeiro'; // Texto alterado
+            option.textContent = 'Selecione um local e data primeiro';
             horaSelect.appendChild(option);
             return;
         }
 
-        // Filtra os agendamentos existentes PARA AQUELE DIA E LOCAL ESPECÍFICO
         const horariosOcupadosNessaDataELocal = agendamentosExistentes
             .filter(agenda => agenda.data === dataParaVerificar && agenda.local === localParaVerificar)
             .map(agenda => agenda.horario);
 
-        // Filtra os horários fixos para mostrar apenas os que não estão ocupados
         const horariosRealmenteDisponiveis = HORARIOS_FIXOS_DISPONIVEIS.filter(horaFixa => {
             return !horariosOcupadosNessaDataELocal.includes(horaFixa);
         });
@@ -416,7 +521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (horariosRealmenteDisponiveis.length === 0) {
             const option = document.createElement('option');
             option.value = "";
-            option.textContent = "Nenhum horário disponível para esta data e local"; // Texto específico
+            option.textContent = "Nenhum horário disponível para esta data e local";
             option.disabled = true;
             horaSelect.appendChild(option);
         } else {
@@ -429,9 +534,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-
-    // --- EVENT LISTENERS PARA OS BOTÕES NA TABELA ---
+    // --- FUNÇÕES DE AÇÃO (EDITAR E DELETAR) ---
     editarSelecionadoBtn.addEventListener('click', () => {
+        if (currentUserRole !== 'admin') {
+            alert('Você não tem permissão para editar bancas.');
+            return;
+        }
         const selectedRadio = document.querySelector('input[name="bancaSelecionada"]:checked');
         if (selectedRadio) {
             preencherFormularioParaEdicao(selectedRadio.value);
@@ -441,6 +549,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     deletarSelecionadoBtn.addEventListener('click', () => {
+        if (currentUserRole !== 'admin') {
+            alert('Você não tem permissão para deletar bancas.');
+            return;
+        }
         const selectedRadio = document.querySelector('input[name="bancaSelecionada"]:checked');
         if (selectedRadio) {
             deletarBanca(selectedRadio.value);
@@ -449,85 +561,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-
-    // --- EVENT LISTENER PARA O BOTÃO DE ATUALIZAR LISTA DE BANCAS ---
+    exportarCsvBtn.addEventListener('click', exportarBancasParaCSV);
     listarBancasBtn.addEventListener('click', carregarBancasDoFirestore);
 
-    // --- CARREGAR BANCAS AO INICIAR A PÁGINA ---
-    carregarBancasDoFirestore();
+    // --- CARREGAR BANCAS AO INICIAR A PÁGINA E ATUALIZAR UI ---
+    updateUIVisibility();
+    // A chamada inicial a atualizarHorariosDisponiveis() ainda é importante para carregar o dropdown.
+    atualizarHorariosDisponiveis(); 
 
-    // Chamada inicial para preencher os horários disponíveis
-    // (Pode precisar de uma seleção de local e data inicial para ter efeito)
-    atualizarHorariosDisponiveis();
-
-    // Adicionar event listeners para os botões de rádio do local
+    // --- LÓGICA DE VISIBILIDADE DA CAIXA DE TEXTO "OUTRO" LOCAL ---
+    // Adicionar event listeners a TODOS os botões de rádio de local
     localRadioButtons.forEach(radio => {
-        radio.addEventListener('change', atualizarHorariosDisponiveis);
+        radio.addEventListener('change', () => {
+            if (radio.value === 'Outro') {
+                outroLocalDiv.style.display = 'block'; // Mostra a caixa de texto
+                outroLocalInput.focus(); // Coloca o foco na caixa de texto
+            } else {
+                outroLocalDiv.style.display = 'none'; // Esconde a caixa de texto
+                outroLocalInput.value = ''; // Limpa o valor
+                // Ao mudar de "Outro" para um fixo, também atualiza os horários
+            }
+            atualizarHorariosDisponiveis(); // Sempre chamar para atualizar horários
+        });
     });
+
+    // Adicionar event listener para o input de "Outro" local (digitação)
+    outroLocalInput.addEventListener('input', atualizarHorariosDisponiveis);
 
 }); // Fim do DOMContentLoaded
 
 // Função para exportar dados para CSV (compatível com Excel)
 async function exportarBancasParaCSV() {
-    try {
-        const snapshot = await db.collection('bancas').get(); // Busca todos os documentos do Firestore
+    if (currentUserRole !== 'admin') {
+        alert('Você não tem permissão para exportar dados.');
+        return;
+    }
 
+    try {
+        const snapshot = await db.collection('bancas').get();
         if (snapshot.empty) {
             alert('Não há bancas cadastradas para exportar.');
             console.log('Nenhuma banca encontrada no Firestore para exportação. Exportação cancelada.');
             return;
         }
 
-        // Adiciona o Byte Order Mark (BOM) para UTF-8. Isso ajuda o Excel a reconhecer a codificação.
-        let csvContent = "\uFEFF"; 
-
-        // Define os cabeçalhos das colunas, usando PONTO E VÍRGULA como delimitador.
+        let csvContent = "\uFEFF";
         const headers = [
-            "Email", "Tipo de Banca", "Discente", "Orientador", "Coorientador", 
+            "Email", "Tipo de Banca", "Discente", "Orientador", "Coorientador",
             "Título", "Avaliador 1", "Avaliador 2", "Data", "Horário", "Local"
         ];
-        csvContent += headers.join(";") + "\n"; // Une os cabeçalhos com ; e adiciona uma quebra de linha
+        csvContent += headers.join(";") + "\n";
 
         snapshot.forEach(doc => {
-            const data = doc.data(); // Obtém os dados de cada documento
-
-            // Array na ordem dos cabeçalhos para cada linha da planilha.
-            // Cada item é tratado para ser seguro no CSV:
-            // 1. Converte para String.
-            // 2. Substitui aspas internas (") por duas aspas ("") para escapá-las.
-            // 3. Envolve o valor resultante em aspas duplas ("...") para que vírgulas, pontos e vírgulas ou quebras de linha dentro do valor não quebrem as colunas.
+            const data = doc.data();
             const rowData = [
-                data.email,
-                data.tipoBanca,
-                data.discente,
-                data.orientador,
-                data.coorientador || '', // Usa string vazia se coorientador for null/undefined
-                data.titulo,
-                data.avaliador1,
-                data.avaliador2,
-                data.data,
-                data.horario,
-                data.local
+                data.email, data.tipoBanca, data.discente, data.orientador,
+                data.coorientador || '', data.titulo, data.avaliador1,
+                data.avaliador2, data.data, data.horario, data.local
             ].map(item => {
-                // Garante que o valor é uma string e escapa aspas duplas dentro dela
                 let value = String(item).replace(/"/g, '""');
-                return `"${value}"`; // Envolve o valor escapado em aspas duplas
+                return `"${value}"`;
             });
-
-            csvContent += rowData.join(";") + "\n"; // Une os valores da linha com ; e adiciona quebra de linha
+            csvContent += rowData.join(";") + "\n";
         });
 
-        // Cria um objeto Blob (Binary Large Object) com o conteúdo CSV
-        // O tipo MIME 'text/csv;charset=utf-8;' é importante para o navegador
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        
-        // Cria um link temporário (elemento <a>) para iniciar o download
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob); // Cria uma URL temporária para o Blob
-        link.setAttribute('download', 'bancas_agendadas.xlsx'); // Define o nome do arquivo com a extensão .csv
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', 'bancas_agendadas.xlsx');
 
-        // Adiciona o link ao corpo do documento, simula um clique e depois o remove.
-        // Isso força o download do arquivo.
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

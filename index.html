@@ -6,16 +6,12 @@
     <title>Cadastro e Gerenciamento de Bancas</title>
     <link rel="stylesheet" href="estilo.css" />
 
-    <!-- Firebase SDK (no head, para inicializar db cedo) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <!-- Opcional: Remova se não estiver usando Analytics -->
-    <!-- <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-analytics.js"></script> -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     
-    <!-- EmailJS (se estiver usando) -->
     <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
 
-    <!-- Script de CONFIGURAÇÃO do Firebase -->
     <script>
         // Suas configurações do Firebase
         const firebaseConfig = {
@@ -32,8 +28,9 @@
         // Inicializa o Firebase
         firebase.initializeApp(firebaseConfig);
         
-        // Obtém uma referência para o serviço Firestore (agora globalmente acessível)
+        // Obtém uma referência para o serviço Firestore e Auth
         var db = firebase.firestore(); 
+        var auth = firebase.auth(); // Inicializa Auth
     </script>
     
 </head>
@@ -43,13 +40,18 @@
         <div class="container form-container"> 
             <h2>Cadastro de Banca de Defesa</h2>
 
+            <div style="text-align: right; margin-bottom: 20px;">
+                <span id="userInfo" style="font-size: 0.9em; color: #555; margin-right: 10px;"></span>
+                <button id="loginLogoutBtn" class="btn-acao btn-login-logout" style="background-color: #007bff;">Logar como Administrador</button>
+            </div>
+
             <form id="bancaForm"> 
                 <label for="email" class="required">E-mail:</label>
                 <input type="email" id="email" required>
 
                 <label class="required">Tipo de Banca:</label>
                 <div class="radio-group">
-                    <label><input type="radio" name="tipoBanca" value="TCC 1" required> TCC1</label>
+                    <label><input type="radio" name="tipoBanca" value="TCC-1" required> TCC1</label>
                     <label><input type="radio" name="tipoBanca" value="PFC-2" required> PFC2</label>
                 </div>
 
@@ -71,13 +73,17 @@
                 <label for="avaliador2" class="required">Avaliador 2:</label>
                 <input type="text" id="avaliador2" required>
 
-                <!-- NOVO: Local antes da Data -->
                 <label class="required">Local:</label>
                 <div class="local-group">
-                    <label><input type="radio" name="local" value="LSD" required onchange="atualizarHorariosDisponiveis()"> LSD</label>
-                    <label><input type="radio" name="local" value="LEC1" required onchange="atualizarHorariosDisponiveis()"> LEC 1</label>
-                    <label><input type="radio" name="local" value="LEC2" required onchange="atualizarHorariosDisponiveis()"> LEC 2</label>
-                    <label><input type="radio" name="local" value="LEC3" required onchange="atualizarHorariosDisponiveis()"> LEC III</label>
+                    <label><input type="radio" name="local" value="LSD" required> LSD</label>
+                    <label><input type="radio" name="local" value="LEC1"> LEC 1</label>
+                    <label><input type="radio" name="local" value="LEC2"> LEC 2</label>
+                    <label><input type="radio" name="local" value="LEC3"> LEC III</label>
+                    <label><input type="radio" name="local" value="Outro" id="localOutroRadio"> Outro</label> </div>
+
+                <div id="outroLocalDiv" style="display: none; margin-top: 15px;">
+                    <label for="outroLocalInput">Qual o local?</label>
+                    <input type="text" id="outroLocalInput" placeholder="Ex: Sala de Reuniões, Auditório X" />
                 </div>
 
                 <label for="data" class="required">Data da Defesa:</label>
@@ -86,19 +92,18 @@
                 <div id="horarios">
                     <label for="hora" class="required">Horário Disponível:</label>
                     <select id="hora" required>
-                        <option value="">Selecione um local e data primeiro</option> <!-- Texto inicial alterado -->
+                        <option value="">Selecione um local e data primeiro</option>
                     </select>
                 </div>
 
                 <button type="button" id="cadastrarBtn">Cadastrar Banca</button>
                 <button type="button" id="atualizarBtn" style="background-color: #ff9800; display:none;">Atualizar Banca</button>
-                <button type="button" onclick="exportarBancasParaCSV()">Exportar para CSV</button>
             </form>
         </div>
 
         <div class="container listagem-bancas-container" style="margin-top: 20px;">
             <h2>Bancas Cadastradas</h2>
-            <button type="button" id="listarBancasBtn">Lista de Bancas</button> 
+            <button type="button" id="listarBancasBtn">Atualizar Lista de Bancas</button>
             <p id="bancasInfo" style="font-size: 0.9em; color: #666; margin-top: 10px;">Clique em "Atualizar Lista de Bancas" para ver os agendamentos.</p>
             <p id="bancasContagem" style="font-size: 0.9em; color: #666; margin-top: 5px;"></p> 
             
@@ -106,7 +111,6 @@
                 <table id="bancasTable">
                     <thead>
                         <tr>
-                            <th>Ação</th>
                             <th>Data</th>
                             <th>Horário</th>
                             <th>Local</th>
@@ -118,9 +122,10 @@
                     </tbody>
                 </table>
             </div>
-            <div class="acoes-selecao">
-                <button type="button" id="editarSelecionadoBtn" class="btn-acao" style="background-color: #17a2b8;">Editar Selecionado</button>
-                <button type="button" id="deletarSelecionadoBtn" class="btn-acao" style="background-color: #dc3545;">Deletar Selecionado</button>
+            <div class="acoes-selecao" id="adminAcoes" style="display: none; margin-top: 20px;">
+                <button type="button" id="editarSelecionadoBtn" class="btn-acao botoes-admin-line" style="background-color: #17a2b8;">Editar Selecionado</button>
+                <button type="button" id="deletarSelecionadoBtn" class="btn-acao botoes-admin-line" style="background-color: #dc3545;">Deletar Selecionado</button>
+                <button type="button" id="exportarCsvBtn" class="btn-acao botoes-admin-line" style="background-color: #28a745;">Exportar para CSV</button>
             </div>
         </div>
     </div> 
