@@ -11,6 +11,21 @@ let currentUserRole = null;
 let currentUserName = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+     // Verifica se o usuário está autenticado ao carregar a página
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (user) {
+        console.log("Usuário logado:", user.email);
+        document.getElementById('userInfo').textContent = "Logado como: " + user.email;
+        document.getElementById('loginLogoutBtn').textContent = "Sair";
+        document.getElementById('adminAcoes').style.display = 'block';
+      } else {
+        console.log("Usuário não logado");
+        document.getElementById('userInfo').textContent = "Você não está logado";
+        document.getElementById('loginLogoutBtn').textContent = "Logar como Administrador";
+        document.getElementById('adminAcoes').style.display = 'none';
+      }
+    });
+    
     // --- VERIFICAÇÃO DE CONEXÃO COM FIREBASE ---
     if (typeof firebase === 'undefined') {
         console.error('ERRO FATAL: Biblioteca Firebase não carregada. Verifique o <script src="..."> no seu HTML.');
